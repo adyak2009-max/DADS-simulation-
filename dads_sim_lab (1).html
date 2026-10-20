@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DADS IA simulation lab</title>
+<style>
+:root{--bg:#f4f5ef;--card:#fff;--tx:#1b2620;--mut:#5b6a60;--ac:#3a7d44;--ac2:#b5651d;--bd:#d6dccf;--warn:#fff1c2;--warnt:#5c4600;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121915;--card:#1b251f;--tx:#e6eee8;--mut:#9bab9f;--ac:#6fc47c;--ac2:#e0a266;--bd:#2d3b32;--warn:#3a3010;--warnt:#f0da8c}}
+:root[data-theme="dark"]{--bg:#121915;--card:#1b251f;--tx:#e6eee8;--mut:#9bab9f;--ac:#6fc47c;--ac2:#e0a266;--bd:#2d3b32;--warn:#3a3010;--warnt:#f0da8c}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 Georgia,serif;padding:14px}
+.wrap{max-width:980px;margin:0 auto}h1{font-size:1.4rem;margin:.1em 0}h2{font-size:1.05rem;margin:0 0 .5em}
+.sub,table,button,input,select,textarea,.banner,.lab{font-family:system-ui,sans-serif}.sub{color:var(--mut);font-size:.88rem;margin:.3em 0}
+.banner{background:var(--warn);color:var(--warnt);border-radius:6px;padding:7px 12px;font-weight:600;font-size:.83rem;margin:6px 0 10px}
+.lay{display:grid;grid-template-columns:210px 1fr;gap:12px;align-items:start}@media(max-width:700px){.lay{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:12px}
+button{background:var(--ac);color:#fff;border:0;border-radius:6px;padding:8px 12px;font-weight:600;font-size:.9rem;cursor:pointer;margin:3px 5px 3px 0}
+button.alt{background:transparent;color:var(--ac);border:1px solid var(--ac)}button.sel{outline:3px solid var(--ac2)}button:disabled{opacity:.4}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--ac2);outline-offset:2px}
+.tabs button{border-radius:6px 6px 0 0;margin:0 3px 0 0}.tabs .sel{outline:0;background:var(--ac);color:#fff}.tabs button:not(.sel){background:var(--card);color:var(--ac);border:1px solid var(--bd)}
+svg{width:100%;height:auto;display:block;touch-action:none}.sc{overflow-x:auto}
+.rd{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:8px 0}.fm{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+input[type=number],select,textarea{width:100%;padding:7px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);color:var(--tx);font-size:.95rem}
+input[type=range]{width:100%}.lab{font-size:.8rem;color:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:.84rem}th,td{border:1px solid var(--bd);padding:4px 6px;text-align:center}th{background:var(--bg)}.l{text-align:left}
+textarea.csv{height:100px;font:12px monospace}.smell{animation:dr 3s ease-in-out infinite}@keyframes dr{50%{transform:translateY(-8px);opacity:.3}}
+@media(prefers-reduced-motion:reduce){.smell{animation:none}}
+</style></head><body><div class="wrap">
+<h1>DADS concentration and radish root length: simulation lab</h1>
+<div class="banner">Plant growth is SIMULATED from a model made with AI help, based on published tomato DADS data. You observe, photograph and measure it yourself. Declare both in your IA.</div>
+<div id="app"></div></div>
+<script>
+const C=[0,1,2.5,5,10,20,40],NT=1,NS=15,L0=4.2,EC=8,HL=2,EM=.92,HO=.15,K=50,Y0=70,VW=560,VH=440,G=[0,.15,.35,.65,1];
+const D={},R={},O={},P={},B=[],S={ci:0,ti:0,day:4,tab:0,timer:0,pg:0,dr:{}};
+const Q=id=>document.getElementById(id),mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const sd=a=>{if(a.length<2)return 0;const m=mean(a);return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/(a.length-1))};
+function gauss(){let u=0;while(!u)u=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random())}
+const resp=e=>(1+(e>0?HO*Math.exp(-Math.pow(Math.log(e)/.8,2)):0))*(1-EM*Math.pow(e,HL)/(Math.pow(EC,HL)+Math.pow(e,HL)));
+const key=()=>S.ci+'_'+S.ti,r1=v=>Math.max(.1,Math.round(v*10)/10);
+const OPT={leaf:['Green','Pale green','Yellow-green','Yellow','Brown'],shape:['Open and flat','Slightly curled','Curled','Wilted or drooping'],tip:['White','Cream','Light brown','Dark brown or black'],dmg:['None visible','Slight browning','Clear browning','Blackened and shrunken'],smell:['None','Faint','Noticeable','Strong']};
+const LBL={leaf:'Leaf colour',shape:'Leaf shape',tip:'Root tip colour',dmg:'Root damage',smell:'Garlic smell',first:'First day seedlings seen'};
+function grow(){const k=key();if(D[k])return;
+ 
+ const eff=Math.max(0,C[S.ci]*(1+.03*gauss())),pg=.97-.27*Math.pow(Math.min(eff,40)/40,1.5),cv=.16+.1*Math.min(eff,40)/40,h=resp(eff),a=[];
+ for(let s=0;s<NS;s++){const ger=Math.random()<pg,hh=Math.min(1,Math.max(0,h+.05*gauss()));a.push({ger,h:hh,e:hh>.8?1:hh>.4?2:3,L:ger?Math.max(.1,L0*Math.exp(.06*gauss())*h*Math.exp(cv*gauss())):0})}
+ D[k]=a;S.day=0;draw()}
+const len=(q,d)=>q.ger&&d>=q.e?q.L*G[d]:0;
+function potSVG(a,d){
+ const dx=560/NS,n=C[S.ci]==0?0:Math.min(4,1+Math.floor(Math.log2(C[S.ci])));
+ let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 320" role="img" aria-label="Clear container with soil and radish seedlings on day ${d}"><rect width="600" height="320" fill="#eef1e8"/><rect x="10" y="110" width="580" height="190" rx="6" fill="#6b4a2f" stroke="#1b2620"/><line x1="10" x2="590" y1="110" y2="110" stroke="#4a331f" stroke-width="3"/>`;
+ for(let i=0;i<n;i++)s+=`<path class="smell" style="animation-delay:${i*.5}s" d="M${70+i*55},40 q8,-10 0,-20 q-8,-10 0,-20" stroke="#9a8f4a" stroke-width="3" fill="none" opacity=".6"/>`;
+ a.forEach((q,k)=>{const x=20+dx*(k+.5),L=len(q,d);
+  if(!q.ger||L==0){s+=`<ellipse cx="${x}" cy="130" rx="5" ry="3.5" fill="#d9b779"/>`;return}
+  const t=Math.min(1,G[d]*1.2),hue=25+85*q.h,col=`hsl(${hue},55%,${36+8*q.h}%)`,ty=128+L*24,hy=Math.min(60,L*9+4),sz=(3+9*t)*(q.h<.6?.85:1);
+  const rot=q.h<.35?70:q.h<.6?45:20,ry=q.h<.6?sz*.5:sz*.7;
+  s+=`<path d="M${x},128 Q${x+5},${128+L*12} ${x},${ty}" stroke="#f1e8cf" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+  if(q.h<.55)s+=`<circle cx="${x}" cy="${ty}" r="${q.h<.3?3.5:2.5}" fill="${q.h<.3?'#2a1a0c':'#5a3a1a'}"/>`;
+  s+=`<line x1="${x}" x2="${x}" y1="128" y2="${110-hy}" stroke="#a8c97a" stroke-width="2.5"/><ellipse cx="${x-sz*.7}" cy="${110-hy}" rx="${sz}" ry="${ry}" fill="${col}" transform="rotate(${-rot} ${x-sz*.7} ${110-hy})"/><ellipse cx="${x+sz*.7}" cy="${110-hy}" rx="${sz}" ry="${ry}" fill="${col}" transform="rotate(${rot} ${x+sz*.7} ${110-hy})"/>`});
+ return s+'</svg>'}
+function fig(a0,pg){const a=a0.slice(pg*5,pg*5+5);
+ let s=`<svg id="sv" viewBox="0 0 ${VW} ${VH}" role="img" aria-label="Five radish seedlings next to a ruler"><rect width="${VW}" height="${VH}" fill="var(--bg)"/><rect x="0" y="${Y0}" width="40" height="${7.5*K}" fill="#e8d28a" stroke="#8a7536"/>`;
+ for(let m=0;m<=75;m++){const y=Y0+m*K/10,w=m%10==0?24:m%5==0?16:9;s+=`<line x1="${40-w}" x2="40" y1="${y}" y2="${y}" stroke="#3b3210"/>`;if(m%10==0)s+=`<line x1="40" x2="${VW}" y1="${y}" y2="${y}" stroke="var(--bd)"/><text x="4" y="${y+12}" font-size="12" fill="#3b3210">${m/10}</text>`}
+ s+=`<line x1="40" x2="${VW}" y1="${Y0}" y2="${Y0}" stroke="var(--ac2)" stroke-width="2"/><text x="${VW-6}" y="${Y0-4}" text-anchor="end" font-size="11" fill="var(--ac2)">root base (0 cm)</text>`;
+ a.forEach((q,k)=>{const x=95+(VW-120)/5*(k+.5);s+=`<text x="${x}" y="14" text-anchor="middle" font-size="12" fill="var(--mut)">Trial ${pg*5+k+1}</text>`;
+  if(!q.ger){s+=`<ellipse cx="${x}" cy="${Y0+8}" rx="6" ry="4" fill="#d9b779"/>`;return}
+  const L=q.L*K,col=`hsl(${25+85*q.h},55%,${36+8*q.h}%)`;
+  s+=`<polygon points="${x-3.5},${Y0} ${x+3.5},${Y0} ${x+.8},${Y0+L} ${x-.8},${Y0+L}" fill="#f1e8cf" stroke="#cdbf9a" stroke-width=".6"/>`;
+  if(q.h<.55)s+=`<circle cx="${x}" cy="${Y0+L}" r="2.5" fill="#5a3a1a"/>`;
+  s+=`<rect x="${x-1.5}" y="${Y0-30}" width="3" height="30" fill="#a8c97a"/><ellipse cx="${x-9}" cy="${Y0-32}" rx="10" ry="6" fill="${col}" transform="rotate(-25 ${x-9} ${Y0-32})"/><ellipse cx="${x+9}" cy="${Y0-32}" rx="10" ry="6" fill="${col}" transform="rotate(25 ${x+9} ${Y0-32})"/>`});
+ return s+`<line id="gl" x1="40" x2="${VW}" y1="-5" y2="-5" stroke="var(--ac2)" stroke-dasharray="4 3"/><text id="gt" x="${VW-6}" y="-5" text-anchor="end" font-size="13" font-weight="700" fill="var(--ac2)"></text></svg>`}
+function draft(){if(!Q('r0'))return;const k=key();S.dr[k]=S.dr[k]||[];for(let s=0;s<NS;s++){const e=Q('r'+s);if(e&&!e.disabled)S.dr[k][s]=e.value}}
+const dv=(k,s)=>{const d=(S.dr[k]||[])[s],r=R[k];return d!==undefined?d:(r&&r[s]!=='NG'?r[s]:'')};
+function pager(){return '<div>'+[0,1,2].map(p=>`<button class="alt ${S.pg==p?'sel':''}" onclick="draft();S.pg=${p};draw()">Trials ${p*5+1} to ${p*5+5}</button>`).join('')+'</div>'}
+function pick(c,t){draft();stop();S.ci=c;S.ti=t;S.pg=0;S.day=D[key()]?4:0;draw()}
+function setTab(n){draft();stop();S.tab=n;draw()}
+function stop(){if(S.timer){clearInterval(S.timer);S.timer=0}}
+function setDay(d){S.day=d;if(Q('dl'))Q('dl').textContent='Day '+d;if(Q('dy'))Q('dy').value=d;if(Q('stage')&&D[key()])Q('stage').innerHTML=potSVG(D[key()],d)}
+function play(){if(!D[key()])return;if(S.timer){stop();return}setDay(0);S.timer=setInterval(()=>{if(S.day<4)setDay(S.day+1);if(S.day>=4)stop()},900)}
+function photo(){const k=key();P[k]={day:S.day,img:'data:image/svg+xml;utf8,'+encodeURIComponent(potSVG(D[k],S.day))};Q('pm').textContent='Photo taken (day '+S.day+').'}
+function saveObs(){const k=key(),o={n:Q('o_n').value.trim(),g:Q('o_g').value};
+ for(const f of Object.keys(LBL)){o[f]=Q('o_'+f).value;if(!o[f]){Q('msg').textContent='Choose a value for: '+LBL[f]+'.';return}}
+ if(o.g===''){Q('msg').textContent='Count how many seeds germinated.';return}
+ o.photo=P[k]?P[k].img:'';O[k]=o;draw()}
+function saveRead(){const a=D[key()],v=[];
+ for(let s=0;s<NS;s++){if(!a[s].ger){v.push('NG');continue}const x=parseFloat(Q('r'+s).value);if(isNaN(x)||x<=0){Q('msg').textContent='Enter a reading for every seedling.';return}v.push(r1(x))}
+ R[key()]=v;draw()}
+function auto(){const a=D[key()];R[key()]=a.map(q=>q.ger?r1(q.L+.05*gauss()):'NG');draw()}
+function lg(x){const g=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=x,t=x+5.5;t-=(x+.5)*Math.log(t);let s=1.000000000190015;for(let j=0;j<6;j++)s+=g[j]/++y;return -t+Math.log(2.5066282746310005*s/x)}
+function cf(x,a,b){const qab=a+b,qap=a+1,qam=a-1;let c=1,d=1-qab*x/qap;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;let h=d;for(let m=1;m<=200;m++){const m2=2*m;let aa=m*(b-m)*x/((qam+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;h*=d*c;aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<3e-7)break}return h}
+function ib(x,a,b){if(x<=0)return 0;if(x>=1)return 1;const bt=Math.exp(lg(a+b)-lg(a)-lg(b)+a*Math.log(x)+b*Math.log(1-x));return x<(a+1)/(a+b+2)?bt*cf(x,a,b)/a:1-bt*cf(1-x,b,a)/b}
+function stats(){return C.map((c,i)=>{const v=[],tm=[];let pots=0,n=0;for(let t=0;t<NT;t++){const r=R[i+'_'+t];if(r){pots++;n+=NS;const q=r.filter(x=>x!=='NG');q.forEach(x=>v.push(x));q.forEach(x=>tm.push(x))}}return{c,v,tm,pots,n,m:tm.length?mean(tm):NaN,s:sd(tm)}})}
+const welch=(a,b)=>{const va=sd(a)**2/a.length,vb=sd(b)**2/b.length,se=Math.sqrt(va+vb);if(!se)return NaN;const t=(mean(a)-mean(b))/se,df=(va+vb)**2/(va*va/(a.length-1)+vb*vb/(b.length-1));return ib(df/(df+t*t),df/2,.5)};
+function side(){const a=D[key()];
+ let h='<div class="card"><h2>Controls</h2><div class="lab">DADS concentration (mM)</div>';
+ C.forEach((c,i)=>{h+=`<button class="alt ${S.ci==i?'sel':''}" onclick="pick(${i},S.ti)">${c} mM</button>`});
+ if(NT>1)h+='<div class="lab">Trial</div>';if(NT>1)for(let t=0;t<NT;t++)h+=`<button class="alt ${S.ti==t?'sel':''}" onclick="pick(S.ci,${t})">${R[S.ci+'_'+t]&&O[S.ci+'_'+t]?'✓ ':''}${t+1}</button>`;
+ h+=`<div style="margin-top:8px"><button onclick="grow()" ${a?'disabled':''}>Plant and water (4 days)</button></div><div class="lab" id="dl">Day ${S.day}</div><input id="dy" type="range" min="0" max="4" value="${S.day}" ${a?'':'disabled'} aria-label="Day" oninput="setDay(+this.value)"><button class="alt" onclick="play()" ${a?'':'disabled'}>Play days 0 to 4</button>`;
+ const done=Object.keys(R).filter(k=>O[k]).length;
+ return h+`<p class="sub">${done} of ${C.length*NT} concentrations fully recorded (observations and readings). Each concentration can be grown once.</p></div>`}
+function tabBar(){return '<div class="tabs">'+['Observe','Measure','Notebook and results'].map((n,i)=>`<button class="${S.tab==i?'sel':''}" onclick="setTab(${i})">${n}</button>`).join('')+'</div>'}
+function body(){
+ const k=key(),a=D[k];
+ if(S.tab<2&&!a)return '<div class="card"><p class="sub">Choose a concentration and trial, then press "Plant and water (4 days)".</p></div>';
+ if(S.tab==0){const o=O[k]||{},sel=f=>`<div><div class="lab">${LBL[f]}</div><select id="o_${f}"><option value="">Choose…</option>${(OPT[f]||['Day 1','Day 2','Day 3','Day 4','Not seen']).map(x=>`<option ${o[f]==x?'selected':''}>${x}</option>`).join('')}</select></div>`;
+  return `<div class="card"><h2>${C[S.ci]} mM DADS: observe</h2><p class="sub">Use the day slider or Play. Look at the leaves, root tips and the smell lines above the container, then record what you see.</p><div id="stage">${potSVG(a,S.day)}</div><div class="fm">${sel('leaf')}${sel('shape')}${sel('tip')}${sel('dmg')}${sel('smell')}${sel('first')}<div><div class="lab">Seeds germinated (count)</div><input id="o_g" type="number" min="0" max="${NS}" value="${o.g!==undefined?o.g:''}"></div></div><div class="lab" style="margin-top:6px">Notes</div><textarea id="o_n" rows="2">${o.n||''}</textarea><button class="alt" onclick="photo()">Take photo</button><button onclick="saveObs()">Save observations</button><span class="sub" id="pm"></span> <span class="sub" id="msg"></span></div>`}
+ if(S.tab==1){const r=R[k];
+  let h=`<div class="card"><h2>${C[S.ci]} mM DADS: measure (after 4 days)</h2><p class="sub">Move your mouse or finger over the picture for a guide line and cm reading. Type each root length (±0.1 cm). Use the buttons to flip between trials 1 to 5, 6 to 10 and 11 to 15.</p>${pager()}${fig(a,S.pg)}<div class="rd">`;
+  a.forEach((q,s)=>{h+=`<div><div class="lab">Trial ${s+1}</div><input id="r${s}" type="number" step="0.1" min="0" inputmode="decimal" ${q.ger?'':'disabled placeholder="NG"'} value="${dv(k,s)}"></div>`});
+  return h+`</div><button onclick="saveRead()">Save readings</button><button class="alt" onclick="auto()">Auto-measure this container</button><span class="sub" id="msg"></span></div>`}
+ return results()}
+function results(){
+ const st=stats(),ok=st.filter(o=>o.v.length>0);let h='<div class="card"><h2>Results</h2>';
+ if(!ok.length)h+='<p class="sub">Save readings for a container to see results.</p>';
+ else{const top=Math.max(1,Math.ceil(Math.max(...ok.map(o=>o.m+o.s)))),l=48,t=14,b=42,pw=640-l-16,ph=290-t-b,y=v=>t+ph-v/top*ph;
+  let c='<svg viewBox="0 0 640 290" role="img" aria-label="Mean root length by concentration">';
+  for(let i=0;i<=top;i++)c+=`<line x1="${l}" x2="624" y1="${y(i)}" y2="${y(i)}" stroke="var(--bd)"/><text x="${l-8}" y="${y(i)+4}" text-anchor="end" font-size="12" fill="var(--mut)">${i}</text>`;
+  st.forEach((o,i)=>{const bw=pw/C.length,x=l+i*bw+bw*.2,w=bw*.6,cx=x+w/2;if(o.v.length)c+=`<rect x="${x}" y="${y(o.m)}" width="${w}" height="${t+ph-y(o.m)}" fill="var(--ac)"/><line x1="${cx}" x2="${cx}" y1="${y(Math.max(0,o.m-o.s))}" y2="${y(o.m+o.s)}" stroke="var(--tx)" stroke-width="2"/><line x1="${cx-7}" x2="${cx+7}" y1="${y(o.m+o.s)}" y2="${y(o.m+o.s)}" stroke="var(--tx)" stroke-width="2"/>`;c+=`<text x="${cx}" y="${t+ph+16}" text-anchor="middle" font-size="12" fill="var(--tx)">${o.c}</text>`});
+  c+=`<text x="${l+pw/2}" y="284" text-anchor="middle" font-size="12" fill="var(--mut)">DADS concentration (mM)</text><text transform="translate(13 ${t+ph/2}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--mut)">Mean root length (cm)</text></svg>`;
+  h+=c+'<div class="sc"><table><tr><th class="l">DADS (mM)</th><th>Trials recorded</th><th>Germinated</th><th>Trial values (cm)</th><th>Mean (cm)</th><th>SD (cm)</th><th>% of control</th></tr>';
+  const c0=st[0].m;
+  st.forEach(o=>{h+=`<tr><td class="l">${o.c}</td><td>${o.n}</td><td>${o.v.length}/${o.n}</td><td>${o.tm.map(x=>x.toFixed(2)).join(', ')||'–'}</td><td>${o.tm.length?o.m.toFixed(2):'–'}</td><td>${o.tm.length>1?o.s.toFixed(2):'–'}</td><td>${o.tm.length&&c0==c0?(100*o.m/c0).toFixed(0)+'%':'–'}</td></tr>`});
+  h+='</table></div><p class="sub">Each trial is one seed in its own container, so n is the number of trials that grew a seedling.</p>';
+  if(st.every(o=>o.tm.length>1)){const g=st.map(o=>o.tm),N=g.reduce((x,q)=>x+q.length,0),k=C.length,gm=mean(g.flat()),ssb=g.reduce((x,q)=>x+q.length*Math.pow(mean(q)-gm,2),0),ssw=g.reduce((x,q)=>{const m=mean(q);return x+q.reduce((z,v)=>z+(v-m)*(v-m),0)},0),F=(ssb/(k-1))/(ssw/(N-k)),p=ib((N-k)/((N-k)+(k-1)*F),(N-k)/2,(k-1)/2);
+   h+=`<p class="sub">One-way ANOVA on trial means: F(${k-1}, ${N-k}) = ${F.toFixed(2)}, p ${p<.001?'< 0.001':'= '+p.toFixed(3)}. ${p<.05?'Reject the null hypothesis.':'Do not reject the null hypothesis.'}</p><div class="sc"><table><tr><th class="l">Each dose vs 0 mM</th><th>Change (cm)</th><th>Change (%)</th><th>Adjusted p (Welch t, Bonferroni)</th></tr>`;
+   for(let i=1;i<k;i++){const d=st[i].m-st[0].m,pp=Math.min(1,welch(g[i],g[0])*(k-1));h+=`<tr><td class="l">${C[i]} mM</td><td>${d.toFixed(2)}</td><td>${(100*d/st[0].m).toFixed(0)}%</td><td>${isNaN(pp)?'–':pp<.001?'< 0.001':pp.toFixed(3)}${pp<.05?' *':''}</td></tr>`}
+   h+='</table></div>'}
+  else h+='<p class="sub">ANOVA appears once every concentration has at least 2 trials recorded.</p>'}
+ h+='<h2 style="margin-top:12px">Qualitative notebook</h2>';
+ const ks=Object.keys(O).sort();
+ if(!ks.length)h+='<p class="sub">No observations saved yet.</p>';
+ else{h+='<div class="sc"><table><tr><th>Conc.</th><th>Germinated</th><th>First seen</th><th>Leaf colour</th><th>Leaf shape</th><th>Root tip</th><th>Damage</th><th>Smell</th><th class="l">Notes</th><th>Photo</th></tr>';
+  ks.forEach(k=>{const[i,t]=k.split('_').map(Number),o=O[k];h+=`<tr><td>${C[i]} mM</td><td>${o.g}/${NS}</td><td>${o.first}</td><td>${o.leaf}</td><td>${o.shape}</td><td>${o.tip}</td><td>${o.dmg}</td><td>${o.smell}</td><td class="l">${(o.n||'').replace(/</g,'&lt;')}</td><td>${o.photo?`<img alt="Photo of container" width="64" src="${o.photo}">`:'–'}</td></tr>`});h+='</table></div>'}
+ let csv='# SIMULATED DATA\ndads_mM,trial,root_length_cm\n';
+ C.forEach((c,i)=>{for(let t=0;t<NT;t++){const r=R[i+'_'+t];if(r)r.forEach((x,s)=>{csv+=`${c},${s+1},${x}\n`})}});
+ return h+`<h2 style="margin-top:12px">Raw data (CSV)</h2><textarea class="csv" readonly>${csv}</textarea></div>`}
+function draw(){
+ Q('app').innerHTML=`<div class="lay">${side()}<div>${tabBar()}${body()}</div></div>`;
+ const sv=Q('sv');if(sv){const mv=e=>{const b=sv.getBoundingClientRect(),y=(e.clientY-b.top)*VH/b.height,v=(y-Y0)/K;if(v<0||v>7.5)return;Q('gl').setAttribute('y1',y);Q('gl').setAttribute('y2',y);Q('gt').setAttribute('y',y-4);Q('gt').textContent=v.toFixed(1)+' cm'};sv.onpointermove=mv;sv.onpointerdown=mv}}
+draw();
+</script></body></html>
